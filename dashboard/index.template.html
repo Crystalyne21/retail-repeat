@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Online Retail — продажи и повторные покупки</title>
+<style>
+:root{color-scheme:light;--ink:#152a34;--muted:#50646d;--line:#d9e2df;--paper:#f1f5f2;--white:#fff;--green:#176354;--soft:#daeee6;--rust:#944828}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"DM Sans","Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+main,footer{width:min(1120px,calc(100% - 40px));margin:auto}header{padding:32px 0 20px;border-bottom:1px solid var(--line)}
+header p{margin:0;color:var(--muted)}h1{margin:7px 0 0;font-size:clamp(1.85rem,4.2vw,3.1rem);line-height:1.08;letter-spacing:-.045em}
+h2{margin:0;font-size:1.3rem;letter-spacing:-.015em}h3{margin:0 0 10px;font-size:1.02rem}a{color:var(--green)}
+nav{display:flex;flex-wrap:wrap;gap:7px;padding:14px 0}button,select{font:inherit;color:inherit}
+button,select{background:var(--white);border:1px solid #a7b9b5;border-radius:7px;padding:7px 11px}button{cursor:pointer}
+button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:white}
+button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #855218;outline-offset:3px}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:13px}
+.metric,.panel{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px}
+.metric span,.note{color:var(--muted);line-height:1.45}.metric strong{display:block;font-size:clamp(1.08rem,2.3vw,1.75rem);margin-top:7px;letter-spacing:-.025em}
+.panel{margin-bottom:13px}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.top label{display:flex;gap:8px;align-items:center;color:var(--muted)}.note{font-size:.88rem;margin:8px 0}
+.scroll{overflow-x:auto}.chart{display:grid;grid-template-columns:repeat(12,minmax(42px,1fr));align-items:end;min-width:570px;gap:5px;height:165px;margin:18px 0 6px}
+.bar{display:grid;grid-template-rows:1fr auto;height:100%;gap:7px;align-items:end;background:transparent;padding:4px;color:var(--muted);border-color:transparent;font-size:.77rem}
+.bar[aria-pressed="true"]{background:var(--soft);border-color:#76a99b;color:var(--ink)}
+.bar-fill{align-self:end;background:#298071;border-radius:5px 5px 0 0;width:100%;height:var(--height)}
+.month-detail{margin:8px 0 0;padding-top:10px;border-top:1px solid var(--line);min-height:52px;line-height:1.5}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:13px}.dual>*{min-width:0}
+.mix-legend{display:flex;flex-wrap:wrap;gap:7px 17px;margin:13px 0;color:var(--muted);font-size:.88rem}
+.mix-legend span{display:inline-flex;gap:6px;align-items:center}
+.mix-legend span::before{content:"";width:11px;height:11px;border-radius:3px;background:var(--segment)}
+.mix-first{--segment:#648f80}.mix-repeat{--segment:#176354}.mix-unidentified{--segment:#a7774c}
+.mix-chart{display:grid;gap:7px;margin-bottom:16px}.mix-row{display:grid;grid-template-columns:78px 1fr;gap:10px;align-items:center;font-size:.84rem}
+.mix-bar{display:flex;overflow:hidden;height:14px;border-radius:4px;background:var(--paper)}
+.mix-bar span{background:var(--segment)}.pair-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+details summary{cursor:pointer;color:var(--green);margin:6px 0}
+table{width:100%;border-collapse:collapse;font-size:.87rem}th,td{text-align:right;padding:8px 10px;border-bottom:1px solid #e5ece9;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}thead th{font-weight:650;color:var(--muted)}tbody th{font-weight:600}tr:last-child>*{border-bottom:0}
+td.product{text-align:left;white-space:normal;min-width:210px}.heat td{background:var(--cell,#f4f6f5);border:3px solid white;text-align:center;min-width:62px}
+.heat th{text-align:center}.heat th:first-child{text-align:left}
+footer{padding:4px 0 24px;color:var(--muted);font-size:.87rem}
+@media(max-width:720px){.metrics{grid-template-columns:1fr 1fr}.dual{grid-template-columns:1fr}main,footer{width:calc(100% - 24px)}.panel{padding:12px}}
+</style>
+</head>
+<body>
+<main>
+<header><p>Online Retail · декабрь 2010 — ноябрь 2011</p><h1>Продажи и повторные покупки</h1></header>
+<nav aria-label="Разделы">
+    <button data-panel="sales" aria-pressed="true">Продажи</button>
+    <button data-panel="buyers" aria-pressed="false">Покупатели</button>
+    <button data-panel="products" aria-pressed="false">Товары</button>
+    <button data-panel="baskets" aria-pressed="false">Корзины</button>
+    <button data-panel="quality" aria-pressed="false">Очистка</button>
+</nav>
+<section id="sales">
+    <div class="metrics" id="sales-metrics"></div>
+    <div class="panel">
+        <div class="top"><h2>Продажи по месяцам</h2>
+            <label>Рынок <select id="market"><option value="All">Все страны</option><option value="UK">Великобритания</option><option value="Other">Другие страны</option></select></label>
+        </div>
+        <p class="note">Каждый столбец показывает стоимость проданных товаров до вычета кредит-нот.</p>
+        <div class="scroll"><div class="chart" id="chart" aria-label="Помесячные продажи"></div></div>
+        <div class="month-detail" id="month-detail" aria-live="polite"></div>
+    </div>
+    <div class="panel"><h2>Изменение продаж к предыдущему месяцу</h2>
+        <p class="note">Вклад числа заказов и вклад среднего чека в сумме дают изменение продаж. Суммы в фунтах.</p>
+        <div class="scroll"><table id="monthly"></table></div>
+    </div>
+    <div class="panel">
+        <h2>Первые и повторные заказы</h2>
+        <p class="note">Все страны. Полосы показывают доли товарных продаж по типу заказа за каждый месяц.</p>
+        <div class="mix-legend">
+            <span class="mix-first">Первые</span>
+            <span class="mix-repeat">Повторные</span>
+            <span class="mix-unidentified">Без ID</span>
+        </div>
+        <div class="mix-chart" id="order-mix-chart"></div>
+        <details>
+            <summary>Суммы и изменение по месяцам</summary>
+            <div class="scroll"><table id="order-mix-table"></table></div>
+        </details>
+    </div>
+</section>
+<section id="buyers" hidden>
+    <div class="metrics" id="buyer-metrics"></div>
+    <div class="panel"><h2>Покупатели, вернувшиеся в календарном месяце</h2>
+        <p class="note">Когорта — месяц первой покупки, видимой в данных. M1 — следующий календарный месяц. Прочерк означает, что месяц ещё не наблюдался полностью.</p>
+        <div class="scroll"><table class="heat" id="retention"></table></div>
+    </div>
+    <div class="dual">
+        <div class="panel"><h2>Второй заказ за 60 дней</h2>
+            <p class="note">В знаменателе покупатели с полным окном наблюдения.</p>
+            <div class="scroll"><table id="repeat"></table></div>
+        </div>
+        <div class="panel"><h2>Группы покупателей на 1 декабря 2011</h2>
+            <p class="note">Группы учитывают число заказов и дни с последней покупки.</p>
+            <div class="scroll"><table id="segments"></table></div>
+        </div>
+    </div>
+</section>
+<section id="products" hidden>
+    <div class="panel"><div class="top"><h2>Товары</h2>
+        <label>Рейтинг <select id="product-mode"><option value="priority">По сумме кредит-нот</option><option value="top_products">По сумме продаж</option></select></label>
+    </div>
+    <p class="note" id="product-note"></p>
+    <div class="scroll"><table id="product-table"></table></div></div>
+    <div class="panel" id="product-documents"><h2 id="documents-title">Документы первого товара</h2>
+        <p class="note">Крупнейшие документы помогают понять, состоит ли сумма кредит-нот из многих небольших операций.</p>
+        <div class="scroll"><table id="documents"></table></div>
+    </div>
+</section>
+<section id="baskets" hidden>
+    <div class="metrics pair-metrics" id="basket-metrics"></div>
+    <div class="panel">
+        <div class="top">
+            <h2>Товары, которые покупают вместе</h2>
+            <label>Сортировка
+                <select id="pair-mode">
+                    <option value="pairs_by_orders">Больше совместных заказов</option>
+                    <option value="pairs_by_lift">Сильнее связь (lift)</option>
+                </select>
+            </label>
+        </div>
+        <p class="note">В расчёте корзины с 1–50 разными товарами. В таблице пары минимум из 25 заказов.</p>
+        <p class="note">A → B показывает, в какой доле корзин с A есть B. Lift сравнивает совместную покупку с частотой, ожидаемой по отдельной популярности товаров.</p>
+        <div class="scroll"><table id="basket-table"></table></div>
+    </div>
+</section>
+<section id="quality" hidden>
+    <div class="metrics" id="quality-metrics"></div>
+    <div class="panel"><h2>Классификация исходных строк</h2>
+        <p class="note">Категории взаимоисключающие. В таблице весь файл, включая декабрь 2011. Аналитика использует 12 полных месяцев.</p>
+        <div class="scroll"><table id="audit"></table></div>
+    </div>
+</section>
+</main>
+<footer><a href="https://archive.ics.uci.edu/dataset/352/online-retail">Данные Chen (2015), UCI Machine Learning Repository</a></footer>
+<script type="application/json" id="snapshot">__RETAIL_DATA__</script>
+<script>
+const data = JSON.parse(document.querySelector("#snapshot").textContent);
+const number = new Intl.NumberFormat("ru-RU");
+const currency = new Intl.NumberFormat("ru-RU", {style:"currency", currency:"GBP", maximumFractionDigits:0});
+const percent = new Intl.NumberFormat("ru-RU", {maximumFractionDigits:1});
+const decimal = new Intl.NumberFormat("ru-RU", {maximumFractionDigits:2});
+const month = new Intl.DateTimeFormat("ru-RU", {month:"short", year:"2-digit", timeZone:"UTC"});
+const counts = value => value == null ? "—" : number.format(value);
+const gbp = value => value == null ? "—" : currency.format(value);
+const pct = value => value == null ? "—" : percent.format(value) + "%";
+const date = value => month.format(new Date(value));
+const ratio = (numerator, denominator) => denominator ? 100 * numerator / denominator : null;
+const sum = (rows, key) => rows.reduce((total, row) => total + row[key], 0);
+const byId = id => document.getElementById(id);
+
+function writeTable(id, headings, rows) {
+    const table = byId(id);
+    table.replaceChildren();
+    const header = table.createTHead().insertRow();
+    for (const title of headings) {
+        const cell = document.createElement("th");
+        cell.scope = "col";
+        cell.textContent = title;
+        header.append(cell);
+    }
+    const body = table.createTBody();
+    for (const values of rows) {
+        const row = body.insertRow();
+        values.forEach((value, index) => {
+            const cell = index === 0 ? document.createElement("th") : document.createElement("td");
+            if (index === 0) cell.scope = "row";
+            cell.textContent = value;
+            row.append(cell);
+        });
+    }
+}
+
+function writeMetrics(id, values) {
+    byId(id).replaceChildren(...values.map(([label, value]) => {
+        const box = document.createElement("div");
+        box.className = "metric";
+        const name = document.createElement("span");
+        const figure = document.createElement("strong");
+        name.textContent = label;
+        figure.textContent = value;
+        box.append(name, figure);
+        return box;
+    }));
+}
+
+function writeSales() {
+    const rows = data.monthly.filter(row => row.market === byId("market").value);
+    const gross = sum(rows,"gross");
+    const credits = sum(rows,"credits");
+    const orders = sum(rows,"orders");
+    writeMetrics("sales-metrics", [
+        ["Продажи товаров", gbp(gross)], ["После кредит-нот", gbp(gross - credits)],
+        ["Заказы", counts(orders)], ["Средний чек", orders ? gbp(gross / orders) : "—"]
+    ]);
+    const peak = Math.max(1, ...rows.map(row => row.gross));
+    const bars = rows.map(row => {
+        const button = document.createElement("button");
+        button.className = "bar";
+        button.setAttribute("aria-label", date(row.month) + " — " + gbp(row.gross));
+        const fill = document.createElement("span");
+        fill.className = "bar-fill";
+        fill.style.setProperty("--height", (100 * row.gross / peak) + "%");
+        button.append(fill, date(row.month));
+        button.addEventListener("click", () => {
+            bars.forEach(bar => bar.setAttribute("aria-pressed", String(bar === button)));
+            byId("month-detail").textContent = date(row.month) + " · " + gbp(row.gross) + " продаж · " +
+                counts(row.orders) + " заказов · " + gbp(row.credits) + " кредит-нот";
+        });
+        return button;
+    });
+    byId("chart").replaceChildren(...bars);
+    if (bars.length) bars[rows.findIndex(row => row.gross === peak)]?.click();
+    writeTable("monthly", ["Месяц","Заказы","Продажи","Средний чек","Изменение","Вклад заказов","Вклад среднего чека"],
+        rows.map(row => [date(row.month),counts(row.orders),gbp(row.gross),gbp(row.avg_order),
+            gbp(row.gross_change),gbp(row.order_effect),gbp(row.basket_effect)]));
+}
+
+function writeBuyers() {
+    const summary = data.summary;
+    writeMetrics("buyer-metrics", [
+        ["Покупатели с ID", counts(summary.buyers)], ["С полным окном 60 дней", counts(summary.eligible_60)],
+        ["Второй заказ за 60 дней", counts(summary.returned_60)], ["Доля повторной покупки", pct(ratio(summary.returned_60, summary.eligible_60))]
+    ]);
+    const cohorts = data.second_purchase.map(row => row.cohort);
+    const cohortRows = cohorts.map(cohort => {
+        const rows = data.retention.filter(row => row.cohort === cohort);
+        return [date(cohort), counts(rows[0].buyers), ...rows.map(row => pct(row.retention_pct))];
+    });
+    writeTable("retention", ["Когорта","Покупатели","M0","M1","M2","M3","M4","M5","M6"], cohortRows);
+    const cells = byId("retention").tBodies[0].rows;
+    data.retention.forEach((row, index) => {
+        const cell = cells[Math.floor(index / 7)].cells[row.age + 2];
+        if (row.retention_pct != null) {
+            cell.style.setProperty("--cell", `hsl(157 36% ${98 - 0.22 * row.retention_pct}%)`);
+            cell.title = counts(row.active_buyers) + " из " + counts(row.buyers);
+        }
+    });
+    writeTable("repeat", ["Когорта","Наблюдаемые","Вернулись","Доля"],
+        data.second_purchase.map(row => [date(row.cohort),counts(row.eligible),counts(row.returned),pct(ratio(row.returned,row.eligible))]));
+    writeTable("segments", ["Группа","Покупатели","Заказы","Продажи"],
+        data.segments.map(row => [row.segment,counts(row.buyers),counts(row.orders),gbp(row.gross)]));
+}
+
+function writeOrderMix() {
+    const types = ["first", "repeat", "unidentified"];
+    const labels = {first:"Первые", repeat:"Повторные", unidentified:"Без ID"};
+    const months = [...new Set(data.order_mix.map(row => row.month))];
+    const chart = byId("order-mix-chart");
+    const tableRows = [];
+
+    for (const monthValue of months) {
+        const rows = types.map(type =>
+            data.order_mix.find(row => row.month === monthValue && row.order_type === type));
+        const line = document.createElement("div");
+        line.className = "mix-row";
+        const label = document.createElement("span");
+        label.textContent = date(monthValue);
+        const bar = document.createElement("div");
+        bar.className = "mix-bar";
+        bar.setAttribute("role", "img");
+        bar.setAttribute("aria-label", date(monthValue) + ". " +
+            rows.map(row => labels[row.order_type] + " " + pct(row.gross_share_pct)).join(", "));
+
+        for (const row of rows) {
+            const piece = document.createElement("span");
+            piece.className = "mix-" + row.order_type;
+            piece.style.width = (row.gross_share_pct ?? 0) + "%";
+            piece.title = labels[row.order_type] + " · " + gbp(row.gross) + " · " + pct(row.gross_share_pct);
+            bar.append(piece);
+        }
+        line.append(label, bar);
+        chart.append(line);
+        tableRows.push([date(monthValue), ...rows.map(row => gbp(row.gross)),
+            ...rows.map(row => gbp(row.gross_change))]);
+    }
+    writeTable("order-mix-table", ["Месяц","Первые","Повторные","Без ID",
+        "Δ первые","Δ повторные","Δ без ID"], tableRows);
+}
+
+function writeProducts() {
+    const mode = byId("product-mode").value;
+    byId("product-note").textContent = mode === "priority"
+        ? "В рейтинге товары с продажами от £1 000 и минимум пятью кредит-нотами. Доля показывает сумму кредит-нот относительно продаж за тот же период."
+        : "Товары с наибольшей суммой продаж. Кредит-ноты учитываются по дате их выписки.";
+    writeTable("product-table", ["Код","Товар","Продажи","Кредит-ноты, £","Документы","Кредит-ноты / продажи"],
+        (data[mode] || []).map(row => [row.stock_code,row.product,gbp(row.gross),gbp(row.credits),counts(row.credit_notes),pct(row.credit_pct)]));
+    for (const row of byId("product-table").tBodies[0].rows) row.cells[1].className = "product";
+    byId("product-documents").hidden = mode !== "priority" || !data.documents?.length;
+    if (data.priority?.length && data.documents?.length) {
+        byId("documents-title").textContent = "Крупнейшие документы товара " + data.priority[0].stock_code;
+        writeTable("documents", ["Счёт","Тип","Дата","Штук","Сумма"],
+            data.documents.map(row => [row.invoice_no,row.row_type === "sale" ? "Продажа" : "Кредит-нота",
+                row.invoice_at.slice(0, 10),counts(row.units),gbp(row.amount)]));
+    }
+}
+
+function writeBaskets() {
+    const coverage = data.basket_coverage;
+    writeMetrics("basket-metrics", [
+        ["Корзины в анализе", counts(coverage.eligible_orders)],
+        ["Доля всех заказов", pct(ratio(coverage.eligible_orders, coverage.all_orders))],
+        ["Корзины с одним товаром", counts(coverage.single_item_orders)]
+    ]);
+    const mode = byId("pair-mode").value;
+    writeTable("basket-table", ["Коды A · B","Товары A и B","Вместе","Доля корзин","A → B","B → A","Lift"],
+        (data[mode] || []).map(row => [row.stock_a + " · " + row.stock_b,
+            row.product_a + " / " + row.product_b, counts(row.together), pct(row.support_pct),
+            pct(row.confidence_a_to_b_pct), pct(row.confidence_b_to_a_pct), decimal.format(row.lift)]));
+    for (const row of byId("basket-table").tBodies[0].rows) row.cells[1].className = "product";
+}
+
+function writeQuality() {
+    const profile = data.profile;
+    const names = {sale:"Продажи товаров",credit:"Кредит-ноты товаров",duplicate:"Повторные копии",
+        service:"Строки с другими кодами",nonpositive_price:"Нулевая или отрицательная цена",
+        adjustment:"Другой формат номера счёта",sign_mismatch:"Противоречивый знак",invalid:"Некорректный формат"};
+    writeMetrics("quality-metrics", [
+        ["Исходные строки", counts(profile.source_rows)], ["Строки анализа", counts(data.summary.analysis_rows)],
+        ["Исходные строки без ID", counts(profile.source_rows_without_id)], ["Повторные копии", counts(profile.potential_duplicate_rows)]
+    ]);
+    writeTable("audit", ["Категория строки","Строки","Доля исходного файла"],
+        data.cleaning.map(row => [names[row.row_type] || row.row_type,counts(row.rows),pct(ratio(row.rows,profile.source_rows))]));
+}
+
+const tabs = Array.from(document.querySelectorAll("nav button"));
+for (const tab of tabs) {
+    tab.addEventListener("click", () => {
+        for (const other of tabs) {
+            other.setAttribute("aria-pressed", String(other === tab));
+            byId(other.dataset.panel).hidden = other !== tab;
+        }
+    });
+}
+byId("market").addEventListener("change", writeSales);
+byId("product-mode").addEventListener("change", writeProducts);
+byId("pair-mode").addEventListener("change", writeBaskets);
+writeSales();
+writeBuyers();
+writeOrderMix();
+writeProducts();
+writeBaskets();
+writeQuality();
+</script>
+</body>
+</html>
